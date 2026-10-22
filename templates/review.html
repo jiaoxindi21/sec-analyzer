@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>人工复核工作台</h1>
+  <p>对 LLM 判定不确定的告警进行人工确认，反馈将自动写入 Few-shot 库用于后续优化</p>
+</div>
+
+{% if pending %}
+<div class="card">
+  <div class="card-title">待复核告警（{{ pending|length }} 条）</div>
+  <table>
+    <tr><th>API 路径</th><th>来源 IP</th><th>规则</th><th>Payload</th><th>LLM 判定</th><th>操作</th></tr>
+    {% for a in pending %}
+    <tr>
+      <td>{{ a.method }} {{ a.path_template }}</td>
+      <td>{{ a.src_ip }}</td>
+      <td>{{ a.rule_id }}</td>
+      <td style="max-width:220px;font-size:12px;color:#666">{{ a.payload }}</td>
+      <td><span class="badge pending">待确认</span></td>
+      <td>
+        <form method="post" action="/feedback" style="display:inline">
+          <input type="hidden" name="alert_id" value="{{ a.alert_id }}">
+          <button class="btn sm success" name="verdict" value="真实告警">✓ 是攻击</button>
+          <button class="btn sm ghost" name="verdict" value="误报">✗ 误报</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:40px">
+  <p style="color:#16a34a;font-size:16px">✓ 暂无待复核告警</p>
+  <p style="color:#999;margin-top:8px">所有告警已处理完毕</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-title">历史反馈样本库（{{ feedback|length }} 条，将作为 Few-shot 示例喂给 LLM）</div>
+  {% if feedback %}
+  <table>
+    <tr><th>规则</th><th>Payload</th><th>人工结论</th></tr>
+    {% for f in feedback[-10:] %}
+    <tr>
+      <td>{{ f.alert.rule_id }}</td>
+      <td style="font-size:12px;color:#666">{{ f.alert.payload[:60] }}</td>
+      <td><span class="badge {{ 'fp' if f.human_verdict == '误报' else 'high' }}">{{ f.human_verdict }}</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:#999">暂无反馈数据，处理待复核告警后自动积累。</p>
+  {% endif %}
+</div>
+{% endblock %}

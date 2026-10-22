@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>告警事件列表</h1>
+  <p>共 {{ alerts|length }} 条 API 审计告警</p>
+</div>
+
+<div class="card">
+  <table>
+    <tr><th>#</th><th>时间</th><th>API 路径</th><th>来源 IP</th><th>规则</th><th>Payload</th><th>风险</th><th>结论</th></tr>
+    {% for a in alerts %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td style="font-size:12px">{{ a.event_time }}</td>
+      <td>{{ a.method }} {{ a.path_template }}</td>
+      <td>{{ a.src_ip }}</td>
+      <td>{{ a.rule_id }}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#666">{{ a.payload }}</td>
+      <td><span class="badge {{ a.risk_level|lower if a.risk_level else 'low' }}">{{ a.risk_level or '未分析' }}</span></td>
+      <td>
+        {% if a.verdict == '误报' %}<span class="badge fp">误报</span>
+        {% elif a.verdict == '真实告警' %}<span class="badge high">攻击</span>
+        {% else %}<span class="badge pending">待复核</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

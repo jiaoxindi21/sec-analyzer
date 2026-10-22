@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom:20px">
+  <h1>报文分析器</h1>
+  <p>粘贴原始 HTTP 请求报文，AI 自动判定攻击类型与风险等级</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="card">
+    <div class="card-title">输入报文</div>
+    <textarea id="packet" rows="18" style="width:100%;font-family:monospace;font-size:12px;padding:10px;border:1px solid #d0d7de;border-radius:6px" placeholder="POST /api/login HTTP/1.1
+Host: 10.88.22.10
+Content-Type: application/x-www-form-urlencoded
+
+username=admin' OR '1'='1&password=test"></textarea>
+    <div style="margin-top:12px">
+      <button class="btn" onclick="analyze()">🔍 开始分析</button>
+      <button class="btn ghost" onclick="loadSample()">填入示例</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">AI 分析结果</div>
+    <div id="result" style="min-height:300px;color:#999">等待分析...</div>
+  </div>
+</div>
+
+<script>
+function loadSample() {
+  document.getElementById('packet').value = `POST /api/login HTTP/1.1
+Host: 10.88.22.10
+Content-Type: application/x-www-form-urlencoded
+User-Agent: curl/7.68.0
+
+username=admin' OR '1'='1&password=test`;
+}
+
+function analyze() {
+  const pkt = document.getElementById('packet').value;
+  if (!pkt.trim()) { alert('请先输入报文'); return; }
+  document.getElementById('result').innerHTML = '<p style="color:#d97706">AI 分析中...</p>';
+  fetch('/api/analyze_packet', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({packet: pkt})
+  }).then(r => r.json()).then(data => {
+    if (data.error) {
+      document.getElementById('result').innerHTML = '<p style="color:#c0392b">错误：' + data.error + '</p>';
+      return;
+    }
+    const color = data.is_attack ? '#c0392b' : '#16a34a';
+    const badge = data.is_attack
+      ? '<span class="badge high">攻击</span>'
+      : '<span class="badge low">正常</span>';
+    document.getElementById('result').innerHTML = `
+      <p style="font-size:16px;margin-bottom:12px">判定：${badge} <b style="color:${color}">${data.attack_type || '正常业务请求'}</b></p>
+      <p style="margin-bottom:8px"><b>风险等级：</b>${data.risk_level}</p>
+      <div style="margin:12px 0;padding:12px;background:#f8f9fa;border-radius:6px">
+        <p style="margin-bottom:6px"><b>📋 分析</b></p>
+        <p style="color:#555;line-height:1.7">${data.reason}</p>
+      </div>
+      <div style="margin:12px 0;padding:12px;background:#fff8e6;border-radius:6px;border-left:3px solid #d97706">
+        <p style="margin-bottom:6px"><b>🔧 处置建议</b></p>
+        <p style="color:#555;line-height:1.7">${data.remediation || '—'}</p>
+      </div>
+    `;
+  }).catch(e => {
+    document.getElementById('result').innerHTML = '<p style="color:#c0392b">请求失败：' + e + '</p>';
+  });
+}
+</script>
+{% endblock %}

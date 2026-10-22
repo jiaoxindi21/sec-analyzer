@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SecInsight API 审计分析平台</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #2c3e50; font-size: 14px; }
+.topbar { background: linear-gradient(135deg, #1a2a4a, #2c3e6b); color: #fff; height: 56px; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 34px; height: 34px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; }
+.right { display: flex; align-items: center; gap: 16px; font-size: 12px; }
+.version { background: rgba(255,255,255,.15); padding: 3px 10px; border-radius: 4px; }
+.user { display: flex; align-items: center; gap: 8px; }
+.avatar { width: 28px; height: 28px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.sidebar { position: fixed; top: 56px; left: 0; bottom: 0; width: 200px; background: #fff; border-right: 1px solid #e8e8e8; padding: 16px 0; overflow-y: auto; }
+.sidebar .group { padding: 8px 20px; font-size: 11px; color: #999; margin-top: 8px; }
+.sidebar a { display: flex; padding: 9px 20px; color: #555; text-decoration: none; font-size: 13px; border-left: 3px solid transparent; }
+.sidebar a:hover { background: #f5f7fa; color: #1f3a5f; }
+.sidebar a.active { background: #e8f0fe; color: #1f3a5f; border-left-color: #3b82f6; font-weight: 500; }
+.main { margin-left: 200px; margin-top: 56px; padding: 24px; }
+.page-header h1 { font-size: 22px; color: #1a2a4a; }
+.page-header p { color: #888; font-size: 13px; margin-top: 4px; }
+.card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #1a2a4a; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #fafbfc; padding: 10px 12px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #e8e8e8; }
+td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.badge.high { background: #fee; color: #c0392b; }
+.badge.low { background: #e6f7e6; color: #16a34a; }
+.badge.pending { background: #e8f0fe; color: #1f6feb; }
+.badge.running { background: #fef3cd; color: #b45309; }
+.btn { padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; background: #1f3a5f; color: #fff; text-decoration: none; display: inline-block; }
+.btn:hover { background: #2c5282; }
+.btn.sm { padding: 4px 10px; font-size: 12px; }
+.btn.ghost { background: #f0f2f5; color: #555; }
+input, textarea { width: 100%; padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="logo">SI</div>
+    <div><div style="font-weight:600">SecInsight API 审计分析平台</div></div>
+  </div>
+  <div class="right">
+    <span class="version">V1.0</span>
+    <div class="user">
+      <div class="avatar">{{ session.get('username','?')[:1].upper() }}</div>
+      <span>{{ session.get('username','') }}</span>
+      <a href="/logout" style="color:#fff;margin-left:8px">退出</a>
+    </div>
+  </div>
+</div>
+<div class="sidebar">
+  <div class="group">工作导航</div>
+  <a href="/" class="{{ 'active' if active == 'dashboard' else '' }}">⌂ 首页概览</a>
+  <div class="group">API 审计</div>
+  <a href="/upload" class="{{ 'active' if active == 'upload' else '' }}">↑ 导入告警</a>
+  <a href="/packet_analyzer" class="{{ 'active' if active == 'packet' else '' }}">🔬 报文分析器</a>
+  <div class="group">系统</div>
+  <a href="/settings" class="{{ 'active' if active == 'settings' else '' }}">⚙ 我的设置</a>
+</div>
+<div class="main">
+{% block content %}{% endblock %}
+</div>
+</body>
+</html>

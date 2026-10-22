@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom:20px">
+  <h1>概览</h1>
+  <p>欢迎 {{ session.username }} · {% if key_bound %}已接入 DeepSeek AI{% else %}<span style="color:#d97706">未绑定 API Key，请到设置页配置</span>{% endif %}</p>
+</div>
+
+<div class="card">
+  <div class="card-title">最近分析任务</div>
+  {% if tasks %}
+  <table>
+    <tr><th>#</th><th>文件</th><th>状态</th><th>进度</th><th>攻击</th><th>误报</th><th>创建时间</th><th></th></tr>
+    {% for t in tasks %}
+    <tr>
+      <td>{{ t.id }}</td>
+      <td>{{ t.filename }}</td>
+      <td>
+        {% if t.status == 'done' %}<span class="badge low">完成</span>
+        {% elif t.status == 'running' %}<span class="badge running">分析中</span>
+        {% elif t.status == 'failed' %}<span class="badge high">失败</span>
+        {% else %}<span class="badge pending">等待</span>{% endif %}
+      </td>
+      <td>{{ t.analyzed }}/{{ t.total }}</td>
+      <td style="color:#c0392b">{{ t.attack_count }}</td>
+      <td style="color:#16a34a">{{ t.fp_count }}</td>
+      <td style="font-size:12px;color:#888">{{ t.created_at }}</td>
+      <td><a class="btn sm ghost" href="/task/{{ t.id }}">查看</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:#999;text-align:center;padding:30px">暂无任务，<a href="/upload">导入告警</a> 或 <a href="/load_sample">加载示例</a></p>
+  {% endif %}
+</div>
+{% endblock %}

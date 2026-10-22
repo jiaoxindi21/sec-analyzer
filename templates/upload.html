@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom:20px">
+  <h1>导入告警数据</h1>
+  <p>上传 API 审计日志 JSON，系统自动创建分析任务并后台运行</p>
+</div>
+<div class="card">
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <label>选择 JSON 文件</label>
+    <input type="file" name="file" accept=".json">
+    <button class="btn" type="submit">上传并开始分析</button>
+    <a class="btn ghost" href="/load_sample">加载示例数据</a>
+  </form>
+</div>
+<div class="card">
+  <div class="card-title">JSON 格式</div>
+  <pre style="background:#f6f8fa;padding:14px;border-radius:6px;font-size:12px;overflow-x:auto">[
+  {
+    "host": "10.88.22.10", "rule_id": "SQL_INJECTION",
+    "method": "POST", "path_template": "/api/login",
+    "payload": "username=admin' OR '1'='1", "src_ip": "1.2.3.4",
+    "event_time": "2026-10-20 10:00:00"
+  }
+]</pre>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>API 审计分析报告</h1>
+  <p>生成时间：{{ now }}</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><div class="num">{{ summary.total }}</div><div class="label">告警总数</div></div>
+  <div class="stat-card"><div class="num" style="color:#dc2626">{{ summary.attack }}</div><div class="label">确认攻击</div></div>
+  <div class="stat-card"><div class="num" style="color:#16a34a">{{ summary.fp }}</div><div class="label">自动过滤误报</div></div>
+  <div class="stat-card"><div class="num" style="color:#d97706">{{ summary.pending }}</div><div class="label">待人工复核</div></div>
+</div>
+
+<div class="card">
+  <div class="card-title">需立即处理的攻击事件</div>
+  {% if attacks %}
+  <table>
+    <tr><th>API 路径</th><th>来源 IP</th><th>规则</th><th>风险等级</th><th>建议处置</th></tr>
+    {% for a in attacks %}
+    <tr>
+      <td>{{ a.method }} {{ a.path_template }}</td>
+      <td>{{ a.src_ip }}</td>
+      <td>{{ a.rule_id }}</td>
+      <td><span class="badge high">高</span></td>
+      <td style="font-size:12px;color:#666">封禁 IP / 检查接口权限 / 审计访问日志</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:#999">无确认攻击事件</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-title">已自动过滤误报</div>
+  {% if fps %}
+  <table>
+    <tr><th>API 路径</th><th>来源 IP</th><th>规则</th><th>过滤原因</th></tr>
+    {% for f in fps %}
+    <tr>
+      <td>{{ f.method }} {{ f.path_template }}</td>
+      <td>{{ f.src_ip }}</td>
+      <td>{{ f.rule_id }}</td>
+      <td style="font-size:12px;color:#666">payload 为正常业务输入，无攻击特征</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:#999">无误报</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+  <div>
+    <h1>分析任务 #{{ task.id }}</h1>
+    <p>{{ task.filename }} · 创建于 {{ task.created_at }}</p>
+  </div>
+  {% if task.status == 'done' %}
+  <a href="/task/{{ task.id }}/export" class="btn">📄 导出分析报告</a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div style="display:flex;gap:20px;margin-bottom:16px">
+    <div><b>状态：</b>
+      {% if task.status == 'done' %}<span class="badge low">✓ 完成</span>
+      {% elif task.status == 'running' %}<span class="badge running">分析中...</span>
+      {% elif task.status == 'failed' %}<span class="badge high">失败</span>
+      {% else %}<span class="badge pending">等待</span>{% endif %}
+    </div>
+    <div><b>进度：</b>{{ task.analyzed }}/{{ task.total }}</div>
+    <div style="color:#c0392b"><b>攻击：</b>{{ task.attack_count }}</div>
+    <div style="color:#16a34a"><b>误报：</b>{{ task.fp_count }}</div>
+  </div>
+  {% if task.status == 'running' or task.status == 'pending' %}
+  <p style="font-size:12px;color:#d97706">页面会自动刷新...</p>
+  <script>setTimeout(()=>location.reload(), 2000)</script>
+  {% endif %}
+  {% if task.error %}<p style="color:#c0392b;font-size:12px">错误：{{ task.error }}</p>{% endif %}
+</div>
+
+<div class="card">
+  <div class="card-title">告警明细</div>
+  <table>
+    <tr><th>API 路径</th><th>来源 IP</th><th>规则</th><th>Payload</th><th>结论</th><th>LLM 理由</th></tr>
+    {% for a in alerts %}
+    <tr>
+      <td>{{ a.method }} {{ a.path_template }}</td>
+      <td>{{ a.src_ip }}</td>
+      <td>{{ a.rule_id }}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#666">{{ a.payload }}</td>
+      <td>
+        {% if a.verdict == '误报' %}<span class="badge low">误报</span>
+        {% elif a.verdict == '真实告警' %}<span class="badge high">攻击</span>
+        {% else %}<span class="badge pending">待分析</span>{% endif %}
+      </td>
+      <td style="font-size:12px;color:#888">{{ a.llm_reason }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
