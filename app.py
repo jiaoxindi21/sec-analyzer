@@ -227,7 +227,7 @@ td{{padding:10px;font-size:13px;border-bottom:1px solid #f0f0f0}}
 <tr><th>路径</th><th>来源 IP</th><th>规则</th><th>误报原因</th></tr>
 {"".join(f'<tr><td>{a["method"]} {a["path_template"]}</td><td>{a["src_ip"]}</td><td>{a["rule_id"]}</td><td>{a["llm_reason"]}</td></tr>' for a in fps) or '<tr><td colspan="4">无</td></tr>'}
 </table></div>
-<p class="meta" style="margin-top:40px">本报告由 SecInsight 自动生成</p>
+<p class="meta" style="margin-top:40px">本报告由 sec-analyzer 自动生成</p>
 </body></html>"""
     from flask import Response
     return Response(html, mimetype="text/html; charset=utf-8")

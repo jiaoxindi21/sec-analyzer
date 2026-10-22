@@ -1,10 +1,10 @@
-# SecInsight
+# sec-analyzer
 
 > API 审计告警智能分析平台 —— 部门内部安全运营工具
 
 ## 概述
 
-SecInsight 是面向安全运营团队的 API 告警分析工具，用于替代人工逐条研判海量 WAF / API 审计告警。平台通过两阶段聚类降噪 + 大模型判定，将告警分析效率提升一个数量级，并自动生成结构化处置建议。
+sec-analyzer 是面向安全运营团队的 API 告警分析工具，用于替代人工逐条研判海量 WAF / API 审计告警。平台通过两阶段聚类降噪 + 大模型判定，将告警分析效率提升一个数量级，并自动生成结构化处置建议。
 
 **当前版本**：v1.2.0
 **技术栈**：Python / Flask / SQLite / DeepSeek LLM
@@ -51,7 +51,7 @@ python app.py
 ## 项目结构
 
 ```
-secinsight/
+sec-analyzer/
 ├── app.py              # Flask 路由
 ├── core.py             # 聚类 / 缓存 / 语义相似度
 ├── db.py               # SQLite 数据模型
