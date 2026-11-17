@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 """SecInsight-Pro - API 审计告警智能分析平台（企业版）"""
-import sys, os, json, threading
-sys.path.insert(0, r'C:\Users\HP\Doubao\chats\2026-10-21\new-chat\.pylibs')
+import os, json, threading
 from datetime import datetime
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
-from db import (init_db, create_user, verify_user, get_user, save_api_key,
+
+import config
+from db import (init_db, create_user, verify_user, get_user, save_api_key, load_api_key,
                 create_task, update_task, get_task, list_tasks,
-                insert_alerts, update_alert, list_alerts, batch_update_alerts)
-from core import cluster_stage1, cluster_stage2_semantic, jaccard_similarity
+                insert_alerts, list_alerts, batch_update_alerts, list_pending_review, mark_reviewed)
+from core import (cluster_stage1, cluster_stage2_semantic, jaccard_similarity,
+                  get_feedback, add_feedback)
 
 app = Flask(__name__)
-app.secret_key = "secinsight-pro-secret-key-2026"
+app.secret_key = config.SECRET_KEY
 init_db()
 
 
 # ============ LLM 真实调用 ============
 def call_deepseek(api_key: str, alert: dict, few_shot: list = None) -> dict:
     from openai import OpenAI
-    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+    client = OpenAI(api_key=api_key, base_url=config.DEEPSEEK_BASE_URL)
     examples = ""
     for ex in (few_shot or [])[-3:]:
         examples += f"\n历史案例: {ex['alert'].get('payload','')} => 人工判定: {ex['human_verdict']}\n"
@@ -151,7 +153,7 @@ def upload():
         tid = create_task(uid, f.filename if f else "manual.json", len(alerts))
         insert_alerts(tid, alerts)
         # 后台线程跑分析
-        threading.Thread(target=run_task, args=(tid, alerts, user.get("deepseek_key","")), daemon=True).start()
+        threading.Thread(target=run_task, args=(tid, alerts, load_api_key(uid)), daemon=True).start()
         return redirect(url_for("task_detail", tid=tid))
     return render_template("upload.html", active="upload")
 
@@ -165,7 +167,7 @@ def load_sample():
     user = get_user(uid)
     tid = create_task(uid, "sample_alerts.json", len(alerts))
     insert_alerts(tid, alerts)
-    threading.Thread(target=run_task, args=(tid, alerts, user.get("deepseek_key","")), daemon=True).start()
+    threading.Thread(target=run_task, args=(tid, alerts, load_api_key(uid)), daemon=True).start()
     return redirect(url_for("task_detail", tid=tid))
 
 
@@ -233,6 +235,36 @@ td{{padding:10px;font-size:13px;border-bottom:1px solid #f0f0f0}}
     return Response(html, mimetype="text/html; charset=utf-8")
 
 
+@app.route("/review", methods=["GET"])
+@login_required
+def review():
+    """人工复核工作台：待确认告警 + 历史 Few-shot 样本库。"""
+    pending = list_pending_review(session["uid"])
+    return render_template("review.html", active="review",
+                           pending=pending, feedback=get_feedback())
+
+
+@app.route("/feedback", methods=["POST"])
+@login_required
+def feedback():
+    """复核提交：结论写入 Few-shot 库并回填告警，形成闭环。"""
+    alert_id = request.form.get("alert_id", "")
+    verdict = request.form.get("verdict", "")
+    if verdict not in ("真实告警", "误报"):
+        return redirect(url_for("review"))
+    conn_row = None
+    from db import get_db
+    conn = get_db()
+    row = conn.execute("""SELECT a.* FROM alerts a JOIN tasks t ON a.task_id=t.id
+                          WHERE a.id=? AND t.user_id=?""", (alert_id, session["uid"])).fetchone()
+    conn.close()
+    if row:
+        conn_row = dict(row)
+        add_feedback(conn_row, verdict)   # 回流为 Few-shot 示例
+        mark_reviewed(int(alert_id), verdict)
+    return redirect(url_for("review"))
+
+
 @app.route("/packet_analyzer")
 @login_required
 def packet_analyzer():
@@ -244,7 +276,7 @@ def packet_analyzer():
 def analyze_packet():
     pkt = request.json.get("packet", "")
     user = get_user(session["uid"])
-    key = user.get("deepseek_key", "")
+    key = load_api_key(session["uid"])
 
     # 规则引擎兜底：即使没绑 key 也能先给出基础判定
     def rule_based(p):
@@ -253,7 +285,8 @@ def analyze_packet():
             return {"is_attack": True, "attack_type": "SQL注入", "risk_level": "high",
                     "reason": "报文中检测到 SQL 注入特征（逻辑永真式/报错注入函数）",
                     "remediation": "登录接口改用参数化查询（PreparedStatement），WAF 拦截含单引号+OR 的请求，封禁该源 IP"}
-        if "<script" in p_low or "onerror=" in p_low or "onclick=" in p_low and "fetch(" in p_low:
+        if ("<script" in p_low or "onerror=" in p_low
+                or ("onclick=" in p_low and "fetch(" in p_low)):
             return {"is_attack": True, "attack_type": "XSS", "risk_level": "high",
                     "reason": "报文中检测到反射型 XSS payload（script 标签/事件处理器）",
                     "remediation": "输出处做 HTML 转义，CSP 头限制脚本源，WAF 拦截含 <script> 的请求参数"}
@@ -274,7 +307,7 @@ def analyze_packet():
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=key, base_url="https://api.deepseek.com")
+        client = OpenAI(api_key=key, base_url=config.DEEPSEEK_BASE_URL)
         prompt = f"""你是网络安全工程师。分析以下 HTTP 请求报文，判断是否为攻击，并给出处置建议。
 只返回 JSON：{{"is_attack": true/false, "attack_type": "SQL注入/XSS/扫描/正常/...", "risk_level": "high/medium/low/info", "reason": "详细分析该报文为何是/不是攻击", "remediation": "针对该攻击类型的具体修复建议（如下游如何防御、WAF规则、代码修复方向）"}}
 
